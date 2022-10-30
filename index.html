@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="halloween">
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex" />
+    <title>拡張qiita</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.33.0/dist/full.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/iconfont/tabler-icons.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- <script src="./src/particles.js"></script> -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clifford: '#da373d',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="err_bar" class="grid justify-items-end" style="display: none;">
+        <div class="alert shadow-lg alert-error max-w-[40%] z-50 fixed">
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span id="err_msg"></span>
+            </div>
+            <div class="flex-none">
+                <button class="btn btn-sm" onclick="closeErroBar()">Close</button>
+            </div>
+        </div>
+    </div>
+    <header class="static">
+        <div class="hero min-h-screen" id="particles-js">
+            <div class="hero-overlay bg-opacity-70"></div>
+            <div class="hero-content text-center text-neutral-content">
+                <div class="max-w-md">
+                    <h1 class="mb-5 text-5xl font-bold">拡張Qiita</h1>
+                    <p class="mb-5">Qiitaの検索機能を拡張しました。拡張と言っても検索オプションを意識することなく検索できるようにしただけです。
+                    </p>
+                    <div class="flex flex-row m-2">
+                        <div class="basis-1/2 mt-3">
+                            <h3 class="mb-5 font-bold">タイトル</h3>
+                        </div>
+                        <div class="basis-1/2">
+                            <input type="text" id="search-title" placeholder="Title here"
+                                class="input input-bordered input-primary w-full max-w-xs" />
+                        </div>
+                    </div>
+                    <div class="flex flex-row m-2">
+                        <div class="basis-1/2 mt-3">
+                            <h3 class="mb-5 font-bold">本文</h3>
+                        </div>
+                        <div class="basis-1/2">
+                            <input type="text" id="search-body" placeholder="Body here"
+                                class="input input-bordered input-primary w-full max-w-xs" />
+                        </div>
+                    </div>
+                    <div class="flex flex-row m-2">
+                        <div class="basis-1/2 mt-3">
+                            <h3 class="mb-5 font-bold">タグ</h3>
+                        </div>
+                        <div class="basis-1/2">
+                            <input type="text" id="search-tag" placeholder="Tag here"
+                                class="input input-bordered input-primary w-full max-w-xs" />
+                        </div>
+                    </div>
+                    <div class="flex flex-row m-2">
+                        <div class="basis-1/2 mt-3">
+                            <h3 class="mb-5 font-bold">ストック</h3>
+                        </div>
+                        <div class="basis-1/2">
+                            <input type="number" id="search-stock" placeholder="Stock here" min="0"
+                                class="input input-bordered input-primary w-full max-w-xs" />
+                        </div>
+                    </div>
+                    <div class="flex flex-row m-2">
+                        <div class="basis-1/2 mt-3">
+                            <h3 class="mb-5 font-bold">投稿日(以降)</h3>
+                        </div>
+                        <div class="basis-1/2">
+                            <input type="text" id="search-created" placeholder="2022-01-01" value="2022-01-01"
+                                class="input input-bordered input-primary w-full max-w-xs" />
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="ClickSearch()">検索</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <article id="article">
+        <div id="search-result" class="grid grid-cols-4 gap-4 my-5">
+        </div>
+        <div class="flex justify-center my-5">
+            <div id="pagenation" class="btn-group"></div>
+        </div>
+    </article>
+    <footer class="p-4 footer bg-base-300 text-base-content footer-right">
+        <div>
+            <p>Copyright © 2022 - All right reserved by people!</p>
+        </div>
+    </footer>
+    <?!= HtmlService.createHtmlOutputFromFile('src/particles').getContent(); ?>
+</body>
+<script>
+    function ClickSearch(page = 1) {
+        const title = $('#search-title').val()
+        const body = $('#search-body').val()
+        const tag = $('#search-tag').val()
+        const stock = $('#search-stock').val()
+        const created = $('#search-created').val()
+        if (!title && !body && !tag && !stock && !created) {
+            showErroBar('検索条件のいずれかを入力してください。');
+            return;
+        }
+        const param = {
+            title: title,
+            body: body,
+            tag: tag,
+            stock: stock,
+            created: created,
+            page: page
+        }
+        // MockSearch(page)
+        google.script.run
+            .withSuccessHandler(SuccessSearch)
+            .withFailureHandler(FailureSearch)
+            .Search(param);
+    }
+
+    function MockSearch(page) {
+        const obj = []
+        for (let i = 0; i < 5; i++) {
+            obj.push(
+                {
+                    url: "https://qiita.com/",
+                    title: "React + Typescript + Viteでハンズオン！",
+                    likes_count: 50,
+                    stocks_count: i,
+                    created_at: "2022-10-30T03:16:49+09:00",
+                    user: {
+                        id: "hoge",
+                        name: "",
+                        profile_image_url: "https://placeimg.com/192/192/people"
+                    }
+                },
+                {
+                    url: "https://qiita.com/",
+                    title: "Go言語でAPIを立てて、Kubernetestに乗せて運用をしたけどとても辛かった話（EKS）",
+                    likes_count: 50,
+                    stocks_count: i+1,
+                    created_at: "2022-08-30T03:16:49+09:00",
+                    user: {
+                        id: "neko",
+                        name: "さすらいの猫",
+                        profile_image_url: "https://placeimg.com/192/192/people"
+                    }
+                }
+            )
+        }
+        SuccessSearch([obj, page])
+    }
+    function SuccessSearch(result) {
+        $(window).scrollTop($('#article').position().top);
+        const [arr, page] = result
+        $('#search-result').empty()
+        $('#search-result').append(`
+            <div class="col-start-2 my-5">
+                <h2 class="text-2xl font-bold text-primary" >検索結果（${page}ページ目）</h2>
+            </div>`)
+        for (const idx in arr) {
+            const item = arr[idx]
+            $('#search-result').append(
+                `<div class="col-start-${idx % 2 == 0 ? '2' : '3'} card card-side w-96 bg-base-100">
+                    <figure class="ml-1"><img class="mask mask-circle h-24 w-24" src="${item.user.profile_image_url}" /></figure>
+                    <div class="card-body">
+                        <div>
+                            <p class="text-sm underline"><a href="https://qiita.com/${item.user.id}" target="_blank" rel="noopener noreferrer">${item.user.name || item.user.id}</a></p>
+                        </div>
+                        <h3 class="card-title"><a href="${item.url}" target="_blank" rel="noopener noreferrer">${item.title}</a></h3>
+                        <div class="flex justify-between">
+                            <div class="flex flex-row space-y-8">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-heart"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path
+                                        d="M19.5 12.572l-7.5 7.428l-7.5 -7.428m0 0a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572">
+                                    </path>
+                                </svg>
+                                ${item.likes_count} 
+                            </div>
+                            <div class="flex flex-row space-y-8">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-bookmark"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M9 4h6a2 2 0 0 1 2 2v14l-5 -3l-5 3v-14a2 2 0 0 1 2 -2"></path>
+                                </svg>
+                                ${item.stocks_count}
+                            </div>
+                            <div class="flex flex-row space-y-8">
+                                <p>${convDatetime(item.created_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            );
+        }
+        generatePagenation(arr.length, page)
+    }
+    function FailureSearch() {
+        alert('Failure');
+    }
+    function showErroBar(msg) {
+        $('#err_msg').text(msg);
+        $('#err_bar').show();
+        setTimeout(() => { $('#err_bar').fadeOut(); }, 3000);
+    }
+    function closeErroBar() {
+        $('#err_bar').hide();
+    }
+    function convDatetime(param) {
+        const date = new Date(param)
+        return `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`.replace(/\n|\r/g, '');
+    }
+    function generatePagenation(itemLength, page) {
+        $("#pagenation").empty();
+        if (page == 1 && itemLength < 10) {
+            return;
+        }
+        if (page != 1) {
+            $("#pagenation").append(
+                `<button class="btn" onclick="ClickSearch(${page - 1})">«</button>`
+            )
+        }
+        $("#pagenation").append(
+            `<button class="btn" onclick="ClickSearch(${page})">${page}ページ</button>`
+        )
+        if (itemLength == 10) {
+            $("#pagenation").append(
+                `<button class="btn" onclick="ClickSearch(${page + 1})">»</button>`
+            )
+        }
+    }
+</script>
+
+</html>
